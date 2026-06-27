@@ -15,7 +15,8 @@
     "build": "electron-vite build",
     "dev": "electron-vite dev",
     "start": "electron-vite preview",
-    "dist:linux": "electron-builder --linux"
+    "dist:linux": "electron-builder --linux",
+    "dist:mac": "electron-builder --mac"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
@@ -43,6 +44,13 @@
       "target": ["AppImage", "deb"],
       "category": "Utility",
       "maintainer": "Pomodoro Dev"
+    },
+    "deb": {
+      "afterInstall": "build/after-install.sh"
+    },
+    "mac": {
+      "target": ["dmg", "zip"],
+      "category": "public.app-category.productivity"
     }
   }
 }
