@@ -1,0 +1,67 @@
+import { formatTime } from '../shared/format.js'
+import { PHASE_LABEL, durationFor } from '../shared/config.js'
+import type { EngineState, Phase } from '../shared/types.js'
+
+const RADIUS = 40
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS // ≈ 251.327
+
+const countdown = document.getElementById('countdown')!
+const phaseLabel = document.getElementById('phase-label')!
+const progressMaskCircle = document.getElementById('progress-mask-circle')!
+
+// Initialise the mask ring dasharray so it exactly matches the circumference.
+progressMaskCircle.setAttribute('stroke-dasharray', String(CIRCUMFERENCE))
+
+const PHASE_CLASS: Record<Phase, string> = {
+  work: 'phase-work',
+  short: 'phase-short',
+  long: 'phase-long'
+}
+
+function updateProgress(remainingSeconds: number, phase: Phase): void {
+  const total = durationFor(phase)
+  const progress = remainingSeconds / total
+  // Negative offset shifts the dash pattern clockwise, so the gap opens at
+  // 12 o'clock and expands clockwise (red → yellow → blue → green).
+  const offset = -(1 - progress) * CIRCUMFERENCE
+  progressMaskCircle.setAttribute('stroke-dashoffset', String(offset))
+}
+
+function render(state: EngineState): void {
+  countdown.textContent = formatTime(state.remainingSeconds)
+  phaseLabel.textContent = state.running
+    ? PHASE_LABEL[state.phase]
+    : `Paused — ${PHASE_LABEL[state.phase]}`
+
+  document.body.className = PHASE_CLASS[state.phase]
+  updateProgress(state.remainingSeconds, state.phase)
+}
+
+window.api.onStateChange((state) => render(state))
+
+// Right-click anywhere on the timer face to show the context menu.
+document.addEventListener('contextmenu', (e) => {
+  e.preventDefault()
+  window.api.showContextMenu()
+})
+
+// Custom window drag for the frameless window (replaces -webkit-app-region: drag
+// which swallows right-clicks on some platforms).
+let isDragging = false
+
+document.addEventListener('pointerdown', (e) => {
+  if (e.button === 0) {
+    isDragging = true
+    document.setPointerCapture(e.pointerId)
+  }
+})
+
+document.addEventListener('pointermove', (e) => {
+  if (isDragging && e.buttons & 1) {
+    window.api.dragWindow(e.movementX, e.movementY)
+  }
+})
+
+document.addEventListener('pointerup', () => {
+  isDragging = false
+})

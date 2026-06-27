@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    />
+    <meta name="viewport" content="width=100, initial-scale=1.0" />
+    <title>Pomodoro</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="phase-work">
+    <div id="app">
+      <!-- Four-colour ring progress: red/yellow/blue/green quarters.
+           A mask clips the ring so it shrinks clockwise as time elapses. -->
+      <svg id="progress-ring" viewBox="0 0 100 100">
+        <defs>
+          <mask id="progress-mask">
+            <!--
+              rotate(-90) moves the circle’s start point to 12 o’clock.
+              A NEGATIVE stroke-dashoffset shifts the dash pattern clockwise,
+              so the gap opens at 12 o’clock and expands clockwise:
+              red (12→3) disappears first, then yellow, blue, green.
+            -->
+            <circle
+              id="progress-mask-circle"
+              cx="50"
+              cy="50"
+              r="40"
+              stroke="white"
+              stroke-width="6"
+              fill="none"
+              stroke-dashoffset="0"
+              stroke-linecap="butt"
+              transform="rotate(-90 50 50)"
+            />
+          </mask>
+        </defs>
+        <!-- Four precise 90° arcs (no gaps).  The mask shrinks clockwise
+             starting at 12 o’clock, so red disappears first, then yellow,
+             then blue, then green. -->
+        <g mask="url(#progress-mask)">
+          <!-- Red   : 12 o’clock → 3 o’clock  (disappears first) -->
+          <path d="M 50 10 A 40 40 0 0 1 90 50" stroke="#e74c3c" stroke-width="6" fill="none" stroke-linecap="butt" />
+          <!-- Yellow: 3 o’clock  → 6 o’clock  (disappears second) -->
+          <path d="M 90 50 A 40 40 0 0 1 50 90" stroke="#f1c40f" stroke-width="6" fill="none" stroke-linecap="butt" />
+          <!-- Blue  : 6 o’clock  → 9 o’clock  (disappears third) -->
+          <path d="M 50 90 A 40 40 0 0 1 10 50" stroke="#3498db" stroke-width="6" fill="none" stroke-linecap="butt" />
+          <!-- Green : 9 o’clock  → 12 o’clock (disappears last) -->
+          <path d="M 10 50 A 40 40 0 0 1 50 10" stroke="#2ecc71" stroke-width="6" fill="none" stroke-linecap="butt" />
+        </g>
+      </svg>
+      <div id="timer-content">
+        <div id="countdown" aria-live="polite" aria-atomic="true">25:00</div>
+        <div id="phase-label">Work</div>
+      </div>
+    </div>
+    <script type="module" src="./index.ts"></script>
+  </body>
+</html>
