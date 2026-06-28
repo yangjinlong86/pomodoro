@@ -41,6 +41,7 @@
     "files": ["dist/**/*", "images/**/*", "package.json"],
     "asar": true,
     "icon": "build/icon.png",
+    "electronLanguages": ["en-US", "zh-CN"],
     "linux": {
       "target": ["AppImage", "deb"],
       "category": "Utility",
