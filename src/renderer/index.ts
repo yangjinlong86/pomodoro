@@ -12,6 +12,11 @@ const progressMaskCircle = document.getElementById('progress-mask-circle')!
 // Initialise the mask ring dasharray so it exactly matches the circumference.
 progressMaskCircle.setAttribute('stroke-dasharray', String(CIRCUMFERENCE))
 
+window.api.onWindowResize((size) => {
+  document.body.classList.remove('size-small', 'size-medium', 'size-large')
+  document.body.classList.add(`size-${size}`)
+})
+
 const PHASE_CLASS: Record<Phase, string> = {
   work: 'phase-work',
   short: 'phase-short',
@@ -33,7 +38,8 @@ function render(state: EngineState): void {
     ? PHASE_LABEL[state.phase]
     : `Paused — ${PHASE_LABEL[state.phase]}`
 
-  document.body.className = PHASE_CLASS[state.phase]
+  document.body.classList.remove('phase-work', 'phase-short', 'phase-long')
+  document.body.classList.add(PHASE_CLASS[state.phase])
   updateProgress(state.remainingSeconds, state.phase)
 }
 

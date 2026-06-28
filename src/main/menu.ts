@@ -1,5 +1,5 @@
 import type { MenuItemConstructorOptions } from 'electron'
-import type { EngineState } from '../shared/types.js'
+import type { EngineState, WindowSize } from '../shared/types.js'
 import type { ControlAction } from '../shared/types.js'
 
 /** PURE: build the tray context-menu template from current state. Testable without Electron. */
@@ -19,10 +19,11 @@ export function buildTrayMenu(
   ]
 }
 
-/** PURE: build the window context-menu template from current state and alwaysOnTop flag. */
+/** PURE: build the window context-menu template from current state, alwaysOnTop flag, and window size. */
 export function buildWindowContextMenu(
   state: EngineState,
-  isAlwaysOnTop: boolean
+  isAlwaysOnTop: boolean,
+  currentSize: WindowSize
 ): MenuItemConstructorOptions[] {
   const startPauseLabel = state.running ? 'Pause' : 'Start'
   const startPauseAction: ControlAction = state.running ? 'pause' : 'start'
@@ -34,6 +35,15 @@ export function buildWindowContextMenu(
     { label: startPauseLabel, click: () => send(startPauseAction) },
     { label: 'Stop', click: () => send('reset') },
     { label: 'Reset', click: () => send('reset') },
+    { type: 'separator' },
+    {
+      label: 'Size',
+      submenu: [
+        { label: 'Large', type: 'radio', checked: currentSize === 'large', click: () => menuDispatch.setWindowSize('large') },
+        { label: 'Medium', type: 'radio', checked: currentSize === 'medium', click: () => menuDispatch.setWindowSize('medium') },
+        { label: 'Small', type: 'radio', checked: currentSize === 'small', click: () => menuDispatch.setWindowSize('small') }
+      ]
+    },
     { type: 'separator' },
     { label: 'Quit', click: () => menuDispatch.quit() }
   ]
@@ -48,10 +58,12 @@ export const menuDispatch: {
   send: (action: ControlAction) => void
   toggleAlwaysOnTop: () => void
   quit: () => void
+  setWindowSize: (size: WindowSize) => void
 } = {
   send: () => {},
   toggleAlwaysOnTop: () => {},
-  quit: () => {}
+  quit: () => {},
+  setWindowSize: () => {}
 }
 
 function send(action: ControlAction): void {

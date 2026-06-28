@@ -11,6 +11,8 @@ export interface EngineState {
 
 export type ControlAction = 'start' | 'pause' | 'resume' | 'reset' | 'skip'
 
+export type WindowSize = 'small' | 'medium' | 'large'
+
 /** Pure helper: which phase comes after the given one. */
 export function nextPhase(
   current: Phase,

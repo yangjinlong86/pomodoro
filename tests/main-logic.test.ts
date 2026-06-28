@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { WORK_WINDOW_OPTIONS } from '../src/main/window-options.js'
 import { visibilityForPhase, windowTitleForPhase, trayLabel } from '../src/main/visibility.js'
 import { buildTrayMenu, buildWindowContextMenu, menuDispatch } from '../src/main/menu.js'
-import type { EngineState, ControlAction } from '../src/shared/types.js'
+import type { EngineState, ControlAction, WindowSize } from '../src/shared/types.js'
 
 function state(over: Partial<EngineState> = {}): EngineState {
   return {
@@ -100,10 +100,11 @@ describe('window context menu', () => {
     menuDispatch.send = () => {}
     menuDispatch.toggleAlwaysOnTop = () => {}
     menuDispatch.quit = () => {}
+    menuDispatch.setWindowSize = () => {}
   })
 
   it('exposes Always on Top, Start/Pause, Stop, Reset, Quit', () => {
-    const labels = buildWindowContextMenu(state({ running: false }), true)
+    const labels = buildWindowContextMenu(state({ running: false }), true, 'small')
       .map((m) => m.label)
       .filter((l): l is string => Boolean(l))
     expect(labels).toContain('Cancel Always on Top')
@@ -114,18 +115,18 @@ describe('window context menu', () => {
   })
 
   it('shows "Always on Top" when not always on top, and "Cancel" when on', () => {
-    const off = buildWindowContextMenu(state(), false)
+    const off = buildWindowContextMenu(state(), false, 'small')
     expect(off.find((m) => m.label === 'Always on Top')).toBeTruthy()
-    const on = buildWindowContextMenu(state(), true)
+    const on = buildWindowContextMenu(state(), true, 'small')
     expect(on.find((m) => m.label === 'Cancel Always on Top')).toBeTruthy()
   })
 
   it('shows Start when not running and Pause when running', () => {
-    const idle = buildWindowContextMenu(state({ running: false }), true)
+    const idle = buildWindowContextMenu(state({ running: false }), true, 'small')
     expect(idle.find((m) => m.label === 'Start')).toBeTruthy()
     expect(idle.find((m) => m.label === 'Pause')).toBeFalsy()
 
-    const running = buildWindowContextMenu(state({ running: true }), true)
+    const running = buildWindowContextMenu(state({ running: true }), true, 'small')
     expect(running.find((m) => m.label === 'Pause')).toBeTruthy()
     expect(running.find((m) => m.label === 'Start')).toBeFalsy()
   })
@@ -134,11 +135,11 @@ describe('window context menu', () => {
     const captured: ControlAction[] = []
     menuDispatch.send = (a) => captured.push(a)
 
-    const idle = buildWindowContextMenu(state({ running: false }), true)
+    const idle = buildWindowContextMenu(state({ running: false }), true, 'small')
     idle.find((m) => m.label === 'Start')!.click?.(undefined as never, undefined as never, undefined as never)
     expect(captured).toEqual(['start'])
 
-    const running = buildWindowContextMenu(state({ running: true }), true)
+    const running = buildWindowContextMenu(state({ running: true }), true, 'small')
     running.find((m) => m.label === 'Pause')!.click?.(undefined as never, undefined as never, undefined as never)
     expect(captured).toEqual(['start', 'pause'])
   })
@@ -146,7 +147,7 @@ describe('window context menu', () => {
   it('Stop and Reset both dispatch reset', () => {
     const captured: ControlAction[] = []
     menuDispatch.send = (a) => captured.push(a)
-    const menu = buildWindowContextMenu(state(), true)
+    const menu = buildWindowContextMenu(state(), true, 'small')
     menu.find((m) => m.label === 'Stop')!.click?.(undefined as never, undefined as never, undefined as never)
     menu.find((m) => m.label === 'Reset')!.click?.(undefined as never, undefined as never, undefined as never)
     expect(captured).toEqual(['reset', 'reset'])
@@ -157,10 +158,48 @@ describe('window context menu', () => {
     menuDispatch.toggleAlwaysOnTop = () => callbacks.push('toggle')
     menuDispatch.quit = () => callbacks.push('quit')
 
-    const menu = buildWindowContextMenu(state(), true)
+    const menu = buildWindowContextMenu(state(), true, 'small')
     menu.find((m) => m.label === 'Cancel Always on Top')!.click?.(undefined as never, undefined as never, undefined as never)
     menu.find((m) => m.label === 'Quit')!.click?.(undefined as never, undefined as never, undefined as never)
 
     expect(callbacks).toEqual(['toggle', 'quit'])
+  })
+
+  it('exposes a Size submenu with Large, Medium, Small radio items', () => {
+    const menu = buildWindowContextMenu(state(), true, 'small')
+    const sizeItem = menu.find((m) => m.label === 'Size')
+    expect(sizeItem).toBeTruthy()
+    const submenu = sizeItem?.submenu as { label: string; type?: string; checked?: boolean }[]
+    expect(submenu).toBeTruthy()
+    expect(submenu.map((m) => m.label)).toEqual(['Large', 'Medium', 'Small'])
+    expect(submenu[2].type).toBe('radio')
+    expect(submenu[2].checked).toBe(true)
+  })
+
+  it('checks the correct Size item based on currentSize', () => {
+    const small = buildWindowContextMenu(state(), true, 'small')
+    const medium = buildWindowContextMenu(state(), true, 'medium')
+    const large = buildWindowContextMenu(state(), true, 'large')
+
+    const smallSub = small.find((m) => m.label === 'Size')?.submenu as { label: string; checked?: boolean }[]
+    const mediumSub = medium.find((m) => m.label === 'Size')?.submenu as { label: string; checked?: boolean }[]
+    const largeSub = large.find((m) => m.label === 'Size')?.submenu as { label: string; checked?: boolean }[]
+
+    expect(smallSub.find((m) => m.label === 'Small')?.checked).toBe(true)
+    expect(mediumSub.find((m) => m.label === 'Medium')?.checked).toBe(true)
+    expect(largeSub.find((m) => m.label === 'Large')?.checked).toBe(true)
+  })
+
+  it('clicking a Size item dispatches setWindowSize', () => {
+    const captured: WindowSize[] = []
+    menuDispatch.setWindowSize = (s) => captured.push(s)
+
+    const menu = buildWindowContextMenu(state(), true, 'small')
+    const submenu = menu.find((m) => m.label === 'Size')?.submenu as { label: string; click?: () => void }[]
+    submenu.find((m) => m.label === 'Large')!.click?.()
+    submenu.find((m) => m.label === 'Medium')!.click?.()
+    submenu.find((m) => m.label === 'Small')!.click?.()
+
+    expect(captured).toEqual(['large', 'medium', 'small'])
   })
 })

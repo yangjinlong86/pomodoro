@@ -1,8 +1,8 @@
-import { app, ipcMain, Menu, Notification } from 'electron'
+import { app, ipcMain, Menu, Notification, screen } from 'electron'
 import { PomodoroEngine } from '../timer/PomodoroEngine.js'
 import { PHASE_LABEL } from '../shared/config.js'
-import { CONTROL, DRAG_WINDOW, SHOW_CONTEXT_MENU, STATE_UPDATE } from '../shared/ipc-channels.js'
-import type { ControlAction, Phase } from '../shared/types.js'
+import { CONTROL, DRAG_WINDOW, SHOW_CONTEXT_MENU, STATE_UPDATE, WINDOW_RESIZE } from '../shared/ipc-channels.js'
+import type { ControlAction, Phase, WindowSize } from '../shared/types.js'
 import { createWorkWindow, getWorkWindow } from './window.js'
 import { createTray, destroyTray, updateTray } from './tray.js'
 import { visibilityForPhase, windowTitleForPhase } from './visibility.js'
@@ -11,6 +11,31 @@ import { buildWindowContextMenu, menuDispatch } from './menu.js'
 const engine = new PomodoroEngine()
 let tickInterval: NodeJS.Timeout | null = null
 let previousPhase: Phase | null = null
+
+let currentSize: WindowSize = 'small'
+
+const SIZE_DIMENSIONS: Record<WindowSize, { width: number; height: number }> = {
+  small: { width: 100, height: 100 },
+  medium: { width: 150, height: 150 },
+  large: { width: 300, height: 300 }
+}
+
+function applyWindowSize(size: WindowSize): void {
+  const win = getWorkWindow()
+  if (!win || win.isDestroyed()) return
+  const { width, height } = SIZE_DIMENSIONS[size]
+  const area = screen.getPrimaryDisplay().workArea
+  const x = Math.max(0, area.x + area.width - width)
+  const y = area.y
+
+  // Linux window managers may refuse to shrink a non-resizable window.
+  // Temporarily enable resizing, apply bounds, then restore.
+  win.setResizable(true)
+  win.setBounds({ x, y, width, height })
+  win.setResizable(false)
+
+  win.webContents.send(WINDOW_RESIZE, size)
+}
 
 function dispatch(action: ControlAction): void {
   switch (action) {
@@ -50,6 +75,7 @@ function applyVisibility(phase: Phase): void {
   let win = getWorkWindow()
   if (!win || win.isDestroyed()) {
     win = createWorkWindow()
+    applyWindowSize(currentSize)
   }
   if (visibilityForPhase(phase) === 'show') {
     win.setTitle(windowTitleForPhase(phase))
@@ -89,13 +115,18 @@ if (!gotLock) {
         getWorkWindow()?.show()
       }
     })
-    const win = createWorkWindow()
+    createWorkWindow()
+    applyWindowSize(currentSize)
 
     menuDispatch.toggleAlwaysOnTop = () => {
       const w = getWorkWindow()
       if (w) w.setAlwaysOnTop(!w.isAlwaysOnTop())
     }
     menuDispatch.quit = () => app.quit()
+    menuDispatch.setWindowSize = (size) => {
+      currentSize = size
+      applyWindowSize(size)
+    }
 
     // Publish initial state, then tick every second.
     publish()
@@ -107,7 +138,7 @@ if (!gotLock) {
       const w = getWorkWindow()
       if (!w) return
       const state = engine.getState()
-      const template = buildWindowContextMenu(state, w.isAlwaysOnTop())
+      const template = buildWindowContextMenu(state, w.isAlwaysOnTop(), currentSize)
       Menu.buildFromTemplate(template).popup({ window: w })
     })
 

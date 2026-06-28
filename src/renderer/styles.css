@@ -10,8 +10,8 @@ html,
 body {
   margin: 0;
   padding: 0;
-  width: 100px;
-  height: 100px;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
   color: #ffffff;
@@ -30,8 +30,8 @@ body {
 
 #app {
   position: relative;
-  width: 100px;
-  height: 100px;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -63,7 +63,7 @@ body {
 
 #countdown {
   font-family: 'Orbitron', 'SF Mono', 'Menlo', 'Consolas', monospace;
-  font-size: 22px;
+  font-size: 19px;
   font-weight: 700;
   letter-spacing: 0.5px;
   line-height: 1;
@@ -75,6 +75,31 @@ body {
   text-transform: uppercase;
   letter-spacing: 1px;
   opacity: 0.95;
+}
+
+/* Size-specific scaling --------------------------------------------------- */
+body.size-medium {
+  border-radius: 24px;
+}
+
+body.size-large {
+  border-radius: 48px;
+}
+
+body.size-medium #countdown {
+  font-size: 29px;
+}
+
+body.size-medium #phase-label {
+  font-size: 10px;
+}
+
+body.size-large #countdown {
+  font-size: 57px;
+}
+
+body.size-large #phase-label {
+  font-size: 20px;
 }
 
 /* Solid background by phase — white text on each meets WCAG AA contrast (>= 4.5:1):

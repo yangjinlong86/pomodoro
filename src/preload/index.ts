@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { CONTROL, DRAG_WINDOW, SHOW_CONTEXT_MENU, STATE_UPDATE } from '../shared/ipc-channels.js'
-import type { ControlAction, EngineState } from '../shared/types.js'
+import { CONTROL, DRAG_WINDOW, SHOW_CONTEXT_MENU, STATE_UPDATE, WINDOW_RESIZE } from '../shared/ipc-channels.js'
+import type { ControlAction, EngineState, WindowSize } from '../shared/types.js'
 
 const api = {
   onStateChange(cb: (state: EngineState) => void): () => void {
@@ -16,6 +16,11 @@ const api = {
   },
   dragWindow(dx: number, dy: number): void {
     ipcRenderer.send(DRAG_WINDOW, dx, dy)
+  },
+  onWindowResize(cb: (size: WindowSize) => void): () => void {
+    const listener = (_event: unknown, size: WindowSize): void => cb(size)
+    ipcRenderer.on(WINDOW_RESIZE, listener)
+    return () => ipcRenderer.removeListener(WINDOW_RESIZE, listener)
   }
 }
 
