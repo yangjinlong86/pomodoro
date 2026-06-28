@@ -43,7 +43,19 @@ function render(state: EngineState): void {
   updateProgress(state.remainingSeconds, state.phase)
 }
 
-window.api.onStateChange((state) => render(state))
+let currentState: EngineState | null = null
+
+window.api.onStateChange((state) => {
+  currentState = state
+  render(state)
+})
+
+// Double-click to start / pause the timer.
+document.addEventListener('dblclick', () => {
+  if (!currentState) return
+  isDragging = false
+  window.api.sendControl(currentState.running ? 'pause' : 'start')
+})
 
 // Right-click anywhere on the timer face to show the context menu.
 document.addEventListener('contextmenu', (e) => {
