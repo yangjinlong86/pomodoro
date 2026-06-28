@@ -2,11 +2,12 @@ import { join } from 'node:path'
 import { app, Tray, Menu, nativeImage } from 'electron'
 import { buildTrayMenu, menuDispatch } from './menu.js'
 import { trayLabel } from './visibility.js'
-import type { EngineState } from '../shared/types.js'
-import type { ControlAction } from '../shared/types.js'
+import type { EngineState, ControlAction, WindowSize } from '../shared/types.js'
 
 let tray: Tray | null = null
 let lastMenuRunning: boolean | null = null
+let lastAlwaysOnTop: boolean | null = null
+let lastSize: WindowSize | null = null
 let lastToolTip = ''
 
 function makeIcon(): ReturnType<typeof nativeImage.createFromBuffer> {
@@ -18,23 +19,35 @@ function makeIcon(): ReturnType<typeof nativeImage.createFromBuffer> {
 export function createTray(
   state: EngineState,
   dispatch: (action: ControlAction) => void,
-  onClick: () => void
+  onClick: () => void,
+  isAlwaysOnTop: boolean,
+  currentSize: WindowSize
 ): Tray {
   menuDispatch.send = dispatch
   tray = new Tray(makeIcon())
   tray.setToolTip('Pomodoro')
   tray.on('click', onClick)
-  updateTray(state)
+  updateTray(state, isAlwaysOnTop, currentSize)
   return tray
 }
 
-export function updateTray(state: EngineState): void {
+export function updateTray(
+  state: EngineState,
+  isAlwaysOnTop: boolean,
+  currentSize: WindowSize
+): void {
   if (!tray) return
-  // Only rebuild the context menu when Start/Pause label would change.
+  // Only rebuild the context menu when a label or checked state would change.
   // Rebuilding every second while the menu is open causes click events to be lost.
-  if (state.running !== lastMenuRunning) {
+  if (
+    state.running !== lastMenuRunning ||
+    isAlwaysOnTop !== lastAlwaysOnTop ||
+    currentSize !== lastSize
+  ) {
     lastMenuRunning = state.running
-    tray.setContextMenu(Menu.buildFromTemplate(buildTrayMenu(state)))
+    lastAlwaysOnTop = isAlwaysOnTop
+    lastSize = currentSize
+    tray.setContextMenu(Menu.buildFromTemplate(buildTrayMenu(state, isAlwaysOnTop, currentSize)))
   }
   // Only update tooltip when the text actually changes.
   // Calling setToolTip every second while the context menu is open can cause flicker.

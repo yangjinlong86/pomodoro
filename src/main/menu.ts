@@ -2,25 +2,7 @@ import type { MenuItemConstructorOptions } from 'electron'
 import type { EngineState, WindowSize } from '../shared/types.js'
 import type { ControlAction } from '../shared/types.js'
 
-/** PURE: build the tray context-menu template from current state. Testable without Electron. */
-export function buildTrayMenu(
-  state: EngineState
-): MenuItemConstructorOptions[] {
-  const startPauseLabel = state.running ? 'Pause' : 'Start'
-  const startPauseAction: ControlAction = state.running ? 'pause' : 'start'
-
-  return [
-    { label: startPauseLabel, click: () => send(startPauseAction) },
-    { type: 'separator' },
-    { label: 'Reset', click: () => send('reset') },
-    { label: 'Skip', click: () => send('skip') },
-    { type: 'separator' },
-    { label: 'Quit', role: 'quit' }
-  ]
-}
-
-/** PURE: build the window context-menu template from current state, alwaysOnTop flag, and window size. */
-export function buildWindowContextMenu(
+function buildMenu(
   state: EngineState,
   isAlwaysOnTop: boolean,
   currentSize: WindowSize
@@ -33,8 +15,8 @@ export function buildWindowContextMenu(
     { label: alwaysOnTopLabel, click: () => menuDispatch.toggleAlwaysOnTop() },
     { type: 'separator' },
     { label: startPauseLabel, click: () => send(startPauseAction) },
-    { label: 'Stop', click: () => send('reset') },
     { label: 'Reset', click: () => send('reset') },
+    { label: 'Skip', click: () => send('skip') },
     { type: 'separator' },
     {
       label: 'Size',
@@ -47,6 +29,24 @@ export function buildWindowContextMenu(
     { type: 'separator' },
     { label: 'Quit', click: () => menuDispatch.quit() }
   ]
+}
+
+/** PURE: build the tray context-menu template from current state. Testable without Electron. */
+export function buildTrayMenu(
+  state: EngineState,
+  isAlwaysOnTop: boolean,
+  currentSize: WindowSize
+): MenuItemConstructorOptions[] {
+  return buildMenu(state, isAlwaysOnTop, currentSize)
+}
+
+/** PURE: build the window context-menu template from current state, alwaysOnTop flag, and window size. */
+export function buildWindowContextMenu(
+  state: EngineState,
+  isAlwaysOnTop: boolean,
+  currentSize: WindowSize
+): MenuItemConstructorOptions[] {
+  return buildMenu(state, isAlwaysOnTop, currentSize)
 }
 
 /**

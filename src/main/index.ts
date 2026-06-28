@@ -91,7 +91,7 @@ function publish(): void {
   if (win && !win.isDestroyed()) {
     win.webContents.send(STATE_UPDATE, state)
   }
-  updateTray(state)
+  updateTray(state, win?.isAlwaysOnTop() ?? true, currentSize)
 
   if (previousPhase !== null && previousPhase !== state.phase) {
     notifyPhaseChange(state.phase)
@@ -114,7 +114,7 @@ if (!gotLock) {
       if (engine.getPhase() === 'work') {
         getWorkWindow()?.show()
       }
-    })
+    }, true, currentSize)
     createWorkWindow()
     applyWindowSize(currentSize)
 

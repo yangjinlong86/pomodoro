@@ -55,17 +55,18 @@ describe('windowTitleForPhase / trayLabel', () => {
 })
 
 describe('tray menu', () => {
-  it('exposes Start/Pause, Reset, Skip, Quit', () => {
-    const labels = buildTrayMenu(state({ running: false }))
+  it('exposes Always on Top, Start/Pause, Reset, Skip, Size, Quit', () => {
+    const labels = buildTrayMenu(state({ running: false }), true, 'small')
       .map((m) => m.label)
       .filter((l): l is string => Boolean(l))
-    // Start when not running
+    expect(labels).toContain('Cancel Always on Top')
     expect(labels).toContain('Start')
     expect(labels).toContain('Reset')
     expect(labels).toContain('Skip')
+    expect(labels).toContain('Size')
     expect(labels).toContain('Quit')
-    // Pause when running
-    const labelsRunning = buildTrayMenu(state({ running: true }))
+
+    const labelsRunning = buildTrayMenu(state({ running: true }), true, 'small')
       .map((m) => m.label)
       .filter((l): l is string => Boolean(l))
     expect(labelsRunning).toContain('Pause')
@@ -74,12 +75,12 @@ describe('tray menu', () => {
   it('clicking Start/Pause dispatches the right control action', () => {
     const captured: ControlAction[] = []
     menuDispatch.send = (a) => captured.push(a)
-    const menu = buildTrayMenu(state({ running: false }))
+    const menu = buildTrayMenu(state({ running: false }), true, 'small')
     const start = menu.find((m) => m.label === 'Start')!
     start.click?.(undefined as never, undefined as never, undefined as never)
     expect(captured).toEqual(['start'])
 
-    const menu2 = buildTrayMenu(state({ running: true }))
+    const menu2 = buildTrayMenu(state({ running: true }), true, 'small')
     const pause = menu2.find((m) => m.label === 'Pause')!
     pause.click?.(undefined as never, undefined as never, undefined as never)
     expect(captured).toEqual(['start', 'pause'])
@@ -88,10 +89,33 @@ describe('tray menu', () => {
   it('Reset and Skip dispatch their actions', () => {
     const captured: ControlAction[] = []
     menuDispatch.send = (a) => captured.push(a)
-    const menu = buildTrayMenu(state())
+    const menu = buildTrayMenu(state(), true, 'small')
     menu.find((m) => m.label === 'Reset')!.click?.(undefined as never, undefined as never, undefined as never)
     menu.find((m) => m.label === 'Skip')!.click?.(undefined as never, undefined as never, undefined as never)
     expect(captured).toEqual(['reset', 'skip'])
+  })
+
+  it('Always on Top and Quit trigger their callbacks', () => {
+    const callbacks: string[] = []
+    menuDispatch.toggleAlwaysOnTop = () => callbacks.push('toggle')
+    menuDispatch.quit = () => callbacks.push('quit')
+
+    const menu = buildTrayMenu(state(), true, 'small')
+    menu.find((m) => m.label === 'Cancel Always on Top')!.click?.(undefined as never, undefined as never, undefined as never)
+    menu.find((m) => m.label === 'Quit')!.click?.(undefined as never, undefined as never, undefined as never)
+
+    expect(callbacks).toEqual(['toggle', 'quit'])
+  })
+
+  it('exposes a Size submenu with Large, Medium, Small radio items', () => {
+    const menu = buildTrayMenu(state(), true, 'small')
+    const sizeItem = menu.find((m) => m.label === 'Size')
+    expect(sizeItem).toBeTruthy()
+    const submenu = sizeItem?.submenu as { label: string; type?: string; checked?: boolean }[]
+    expect(submenu).toBeTruthy()
+    expect(submenu.map((m) => m.label)).toEqual(['Large', 'Medium', 'Small'])
+    expect(submenu[2].type).toBe('radio')
+    expect(submenu[2].checked).toBe(true)
   })
 })
 
@@ -103,14 +127,14 @@ describe('window context menu', () => {
     menuDispatch.setWindowSize = () => {}
   })
 
-  it('exposes Always on Top, Start/Pause, Stop, Reset, Quit', () => {
+  it('exposes Always on Top, Start/Pause, Reset, Skip, Quit', () => {
     const labels = buildWindowContextMenu(state({ running: false }), true, 'small')
       .map((m) => m.label)
       .filter((l): l is string => Boolean(l))
     expect(labels).toContain('Cancel Always on Top')
     expect(labels).toContain('Start')
-    expect(labels).toContain('Stop')
     expect(labels).toContain('Reset')
+    expect(labels).toContain('Skip')
     expect(labels).toContain('Quit')
   })
 
@@ -144,13 +168,13 @@ describe('window context menu', () => {
     expect(captured).toEqual(['start', 'pause'])
   })
 
-  it('Stop and Reset both dispatch reset', () => {
+  it('Reset and Skip dispatch their actions', () => {
     const captured: ControlAction[] = []
     menuDispatch.send = (a) => captured.push(a)
     const menu = buildWindowContextMenu(state(), true, 'small')
-    menu.find((m) => m.label === 'Stop')!.click?.(undefined as never, undefined as never, undefined as never)
     menu.find((m) => m.label === 'Reset')!.click?.(undefined as never, undefined as never, undefined as never)
-    expect(captured).toEqual(['reset', 'reset'])
+    menu.find((m) => m.label === 'Skip')!.click?.(undefined as never, undefined as never, undefined as never)
+    expect(captured).toEqual(['reset', 'skip'])
   })
 
   it('Always on Top and Quit trigger their callbacks', () => {
