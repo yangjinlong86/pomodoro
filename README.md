@@ -1,5 +1,7 @@
 # Pomodoro
 
+> [简体中文](README.zh-CN.md) | English
+
 A minimal desktop pomodoro timer built with **Electron + TypeScript**. A small 100×100 always-on-top window floats in the top-right corner during work sessions, hides during breaks, and keeps you focused with a clean LCD-style countdown face.
 
 > 🔔 Full cycle: 25 min work → 5 min short break → repeat. After every 4 work sessions, a 15 min long break. Auto-looping.
