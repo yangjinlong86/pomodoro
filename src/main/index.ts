@@ -1,18 +1,29 @@
-import { app, ipcMain, Menu, Notification, screen } from 'electron'
+import { app, ipcMain, Menu, Notification, screen, shell } from 'electron'
 import { PomodoroEngine } from '../timer/PomodoroEngine.js'
-import { PHASE_LABEL } from '../shared/config.js'
-import { CONTROL, DRAG_WINDOW, SHOW_CONTEXT_MENU, STATE_UPDATE, WINDOW_RESIZE } from '../shared/ipc-channels.js'
+import { phaseLabel } from '../shared/config.js'
+import {
+  CONTROL,
+  DRAG_WINDOW,
+  LOCALE_UPDATE,
+  SHOW_CONTEXT_MENU,
+  STATE_UPDATE,
+  WINDOW_RESIZE
+} from '../shared/ipc-channels.js'
 import type { ControlAction, Phase, WindowSize } from '../shared/types.js'
+import { t, type Locale } from '../shared/i18n.js'
 import { createWorkWindow, getWorkWindow } from './window.js'
 import { createTray, destroyTray, updateTray } from './tray.js'
 import { visibilityForPhase, windowTitleForPhase } from './visibility.js'
 import { buildWindowContextMenu, menuDispatch } from './menu.js'
+import { loadSettings, saveSettings, settingsFilePath } from './settings.js'
 
 const engine = new PomodoroEngine()
 let tickInterval: NodeJS.Timeout | null = null
 let previousPhase: Phase | null = null
 
 let currentSize: WindowSize = 'small'
+let currentLocale: Locale = 'en'
+let settingsFile = ''
 
 const SIZE_DIMENSIONS: Record<WindowSize, { width: number; height: number }> = {
   small: { width: 100, height: 100 },
@@ -20,13 +31,25 @@ const SIZE_DIMENSIONS: Record<WindowSize, { width: number; height: number }> = {
   large: { width: 300, height: 300 }
 }
 
-function applyWindowSize(size: WindowSize): void {
+function applyWindowSize(size: WindowSize, keepPosition = false): void {
   const win = getWorkWindow()
   if (!win || win.isDestroyed()) return
   const { width, height } = SIZE_DIMENSIONS[size]
   const area = screen.getPrimaryDisplay().workArea
-  const x = Math.max(0, area.x + area.width - width)
-  const y = area.y
+
+  let x: number
+  let y: number
+  if (keepPosition) {
+    // Resize in place: keep the current top-left corner, clamped so the
+    // resized window stays fully within the work area.
+    const [curX, curY] = win.getPosition()
+    x = Math.min(Math.max(area.x, curX), area.x + area.width - width)
+    y = Math.min(Math.max(area.y, curY), area.y + area.height - height)
+  } else {
+    // Initial placement: dock to the top-right corner.
+    x = Math.max(0, area.x + area.width - width)
+    y = area.y
+  }
 
   // Linux window managers may refuse to shrink a non-resizable window.
   // Temporarily enable resizing, apply bounds, then restore.
@@ -63,9 +86,10 @@ function dispatch(action: ControlAction): void {
 }
 
 function notifyPhaseChange(phase: Phase): void {
-  const body = phase === 'work' ? 'Time to focus!' : 'Take a break.'
+  const d = t(currentLocale)
+  const body = phase === 'work' ? d.notifyWork : d.notifyBreak
   try {
-    new Notification({ title: PHASE_LABEL[phase], body }).show()
+    new Notification({ title: phaseLabel(phase, currentLocale), body }).show()
   } catch {
     // Notifications unavailable (e.g. headless); ignore.
   }
@@ -78,7 +102,7 @@ function applyVisibility(phase: Phase): void {
     applyWindowSize(currentSize)
   }
   if (visibilityForPhase(phase) === 'show') {
-    win.setTitle(windowTitleForPhase(phase))
+    win.setTitle(windowTitleForPhase(phase, currentLocale))
     if (!win.isVisible()) win.show()
   } else {
     if (win.isVisible()) win.hide()
@@ -91,13 +115,29 @@ function publish(): void {
   if (win && !win.isDestroyed()) {
     win.webContents.send(STATE_UPDATE, state)
   }
-  updateTray(state, win?.isAlwaysOnTop() ?? true, currentSize)
+  updateTray(state, win?.isAlwaysOnTop() ?? true, currentSize, currentLocale)
 
   if (previousPhase !== null && previousPhase !== state.phase) {
     notifyPhaseChange(state.phase)
   }
   applyVisibility(state.phase)
   previousPhase = state.phase
+}
+
+function applyLocale(locale: Locale): void {
+  if (locale === currentLocale) return
+  currentLocale = locale
+  saveSettings(settingsFile, { locale })
+
+  const win = getWorkWindow()
+  if (win && !win.isDestroyed()) {
+    win.webContents.send(LOCALE_UPDATE, locale)
+    if (visibilityForPhase(engine.getPhase()) === 'show') {
+      win.setTitle(windowTitleForPhase(engine.getPhase(), locale))
+    }
+  }
+  // Force the tray to rebuild its menu/tooltip on the next publish.
+  publish()
 }
 
 const gotLock = app.requestSingleInstanceLock()
@@ -109,12 +149,15 @@ if (!gotLock) {
   })
 
   app.whenReady().then(() => {
+    settingsFile = settingsFilePath(app.getPath('userData'))
+    currentLocale = loadSettings(settingsFile).locale
+
     createTray(engine.getState(), dispatch, () => {
       // Clicking the tray icon reveals the work window if currently in a work phase.
       if (engine.getPhase() === 'work') {
         getWorkWindow()?.show()
       }
-    }, true, currentSize)
+    }, true, currentSize, currentLocale)
     createWorkWindow()
     applyWindowSize(currentSize)
 
@@ -125,12 +168,26 @@ if (!gotLock) {
     menuDispatch.quit = () => app.quit()
     menuDispatch.setWindowSize = (size) => {
       currentSize = size
-      applyWindowSize(size)
+      applyWindowSize(size, true)
+    }
+    menuDispatch.setLocale = (locale) => {
+      applyLocale(locale)
+    }
+    menuDispatch.openHelp = () => {
+      void shell.openExternal('https://github.com/yangjinlong86/pomodoro')
     }
 
     // Publish initial state, then tick every second.
     publish()
     tickInterval = setInterval(publish, 1000)
+
+    // Push the initial locale to the renderer as soon as it's loaded.
+    const w = getWorkWindow()
+    if (w) {
+      w.webContents.on('did-finish-load', () => {
+        w.webContents.send(LOCALE_UPDATE, currentLocale)
+      })
+    }
 
     ipcMain.on(CONTROL, (_event, action: ControlAction) => dispatch(action))
 
@@ -138,7 +195,13 @@ if (!gotLock) {
       const w = getWorkWindow()
       if (!w) return
       const state = engine.getState()
-      const template = buildWindowContextMenu(state, w.isAlwaysOnTop(), currentSize)
+      const template = buildWindowContextMenu(
+        state,
+        w.isAlwaysOnTop(),
+        currentSize,
+        currentLocale,
+        app.getVersion()
+      )
       Menu.buildFromTemplate(template).popup({ window: w })
     })
 

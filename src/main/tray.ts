@@ -3,11 +3,13 @@ import { app, Tray, Menu, nativeImage } from 'electron'
 import { buildTrayMenu, menuDispatch } from './menu.js'
 import { trayLabel } from './visibility.js'
 import type { EngineState, ControlAction, WindowSize } from '../shared/types.js'
+import type { Locale } from '../shared/i18n.js'
 
 let tray: Tray | null = null
 let lastMenuRunning: boolean | null = null
 let lastAlwaysOnTop: boolean | null = null
 let lastSize: WindowSize | null = null
+let lastLocale: Locale | null = null
 let lastToolTip = ''
 
 function makeIcon(): ReturnType<typeof nativeImage.createFromBuffer> {
@@ -21,20 +23,22 @@ export function createTray(
   dispatch: (action: ControlAction) => void,
   onClick: () => void,
   isAlwaysOnTop: boolean,
-  currentSize: WindowSize
+  currentSize: WindowSize,
+  locale: Locale
 ): Tray {
   menuDispatch.send = dispatch
   tray = new Tray(makeIcon())
   tray.setToolTip('Pomodoro')
   tray.on('click', onClick)
-  updateTray(state, isAlwaysOnTop, currentSize)
+  updateTray(state, isAlwaysOnTop, currentSize, locale)
   return tray
 }
 
 export function updateTray(
   state: EngineState,
   isAlwaysOnTop: boolean,
-  currentSize: WindowSize
+  currentSize: WindowSize,
+  locale: Locale
 ): void {
   if (!tray) return
   // Only rebuild the context menu when a label or checked state would change.
@@ -42,16 +46,20 @@ export function updateTray(
   if (
     state.running !== lastMenuRunning ||
     isAlwaysOnTop !== lastAlwaysOnTop ||
-    currentSize !== lastSize
+    currentSize !== lastSize ||
+    locale !== lastLocale
   ) {
     lastMenuRunning = state.running
     lastAlwaysOnTop = isAlwaysOnTop
     lastSize = currentSize
-    tray.setContextMenu(Menu.buildFromTemplate(buildTrayMenu(state, isAlwaysOnTop, currentSize)))
+    lastLocale = locale
+    tray.setContextMenu(
+      Menu.buildFromTemplate(buildTrayMenu(state, isAlwaysOnTop, currentSize, locale, app.getVersion()))
+    )
   }
   // Only update tooltip when the text actually changes.
   // Calling setToolTip every second while the context menu is open can cause flicker.
-  const tip = trayLabel(state)
+  const tip = trayLabel(state, locale)
   if (tip !== lastToolTip) {
     lastToolTip = tip
     tray.setToolTip(tip)

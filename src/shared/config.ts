@@ -1,4 +1,5 @@
 import type { Phase } from './types.js'
+import { t, type Locale } from './i18n.js'
 
 /** Phase durations in seconds. */
 export const WORK = 25 * 60
@@ -19,8 +20,15 @@ export function durationFor(phase: Phase): number {
   }
 }
 
-export const PHASE_LABEL: Record<Phase, string> = {
-  work: 'Work',
-  short: 'Short Break',
-  long: 'Long Break'
+/** Localised label for a phase. Pass a Locale to render in that language. */
+export function phaseLabel(phase: Phase, locale?: Locale): string {
+  const d = t(locale)
+  switch (phase) {
+    case 'work':
+      return d.phaseWork
+    case 'short':
+      return d.phaseShort
+    case 'long':
+      return d.phaseLong
+  }
 }

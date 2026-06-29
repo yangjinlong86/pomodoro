@@ -11,11 +11,16 @@ A minimal desktop pomodoro timer built with **Electron + TypeScript**. A small 1
 - **Drift-free countdown** — timing is based on absolute `endTime`, not a decrementing counter
 - **Auto-looping pomodoro cycles** — work → short break → work → ... → long break (every 4th)
 - **Always-on-top work window** — 100×100 frameless window, top-right positioning, auto-hides during breaks
+- **Three window sizes** — Small / Medium / Large, resized in place (the window keeps its position)
 - **LCD-style display** — [Orbitron](https://fonts.google.com/specimen/Orbitron) font with a four-colour progress ring
 - **System tray controls** — start / pause / reset / skip / quit via tray icon menu
-- **Right-click context menu** on the timer face — toggle always-on-top, start/pause, stop, reset, quit
+- **Identical tray & in-window right-click menu** — Pin / Unpin, Start / Pause, Reset, Skip, Size, Language, Help, Quit
+- **Bilingual UI** — English / 中文 selectable from the menu; choice is persisted to `settings.json` and restored on next launch
+- **Double-click to start / pause** the timer face
 - **Drag to move** — left-click and drag the timer face to reposition the window
 - **Phase-change notifications** — desktop notification when switching between work and break
+- **Help** opens [the project on GitHub](https://github.com/yangjinlong86/pomodoro)
+- **Version label** — current version (e.g. `Pomodoro Timer V0.2.0`) shown at the bottom of the menu
 - **Single instance** — only one copy of the app runs at a time
 
 ## Screenshots
@@ -74,10 +79,13 @@ npm run dist:linux
 
 | Action | How |
 |--------|-----|
-| Start / Pause timer | Tray menu or right-click timer face |
+| Start / Pause timer | Tray menu, right-click timer face, or **double-click** timer face |
 | Reset timer | Tray menu or right-click timer face |
-| Skip to next phase | Tray menu |
-| Toggle always-on-top | Right-click timer face |
+| Skip to next phase | Tray menu or right-click timer face |
+| Toggle always-on-top | Tray menu or right-click timer face (**Pin / Unpin**) |
+| Resize window | Menu ▸ **Size** ▸ Small / Medium / Large (resizes in place) |
+| Switch language | Menu ▸ **Language** ▸ English / 中文 (persisted) |
+| Open GitHub page | Menu ▸ **Help** |
 | Move window | Left-click + drag timer face |
 | Show context menu | Right-click timer face |
 | Quit | Tray menu or right-click timer face |
@@ -86,19 +94,20 @@ npm run dist:linux
 
 ```
 src/
-  shared/      Types, config (durations), format (MM:SS), IPC channels
+  shared/      Types, config (durations), format (MM:SS), IPC channels, i18n dictionary
   timer/       PomodoroEngine — pure state machine, zero Electron/DOM deps
   main/        Electron main process
     window-options.ts   BrowserWindow options (100×100, frameless, alwaysOnTop)
     visibility.ts       Helpers: show on work / hide on break, tray label
-    menu.ts             Tray menu & context menu template builder
+    menu.ts             Tray menu & context menu template builder (locale-aware)
     window.ts           Window creation with top-right positioning
     tray.ts             Tray icon, tooltip, menu updates
-    index.ts            App lifecycle, engine tick, IPC, notifications
+    settings.ts         Load / save `settings.json` under userData
+    index.ts            App lifecycle, engine tick, IPC, notifications, locale switching
   preload/     contextBridge exposing window.api to renderer
   renderer/    100×100 minimal UI (HTML/CSS/TS), driven by window.api
     fonts/            Orbitron bold font (local, embedded)
-tests/         Vitest — engine, format, main-logic, smoke
+tests/         Vitest — engine, format, main-logic, settings, smoke
 ```
 
 ### Key Design Decisions
@@ -122,12 +131,15 @@ Expect:
 1. A **100×100 frameless window** appears in the **top-right** corner.
 2. The window is **always on top**.
 3. It shows `25:00` in Orbitron font with a four-colour ring on a black background.
-4. A **tray icon** with a context menu: Start/Pause, Reset, Skip, Quit.
-5. **Right-click** the timer face shows: Always on Top / Cancel Always on Top, Start/Pause, Stop, Reset, Quit.
-6. **Left-click + drag** moves the window.
-7. Starting the timer counts down; on reaching 0 it **auto-advances** to a break and the window **hides**; a desktop notification fires.
-8. After a break it auto-loops back to work and the window **re-shows**.
-9. After 4 work sessions, the break is the 15-minute long break.
+4. A **tray icon** with a context menu: Pin/Unpin, Start/Pause, Reset, Skip, Size, Language, Help, Quit, and a version label at the bottom (`Pomodoro Timer V0.2.0`).
+5. **Right-click** the timer face shows the same menu.
+6. **Double-click** the timer face toggles Start / Pause.
+7. **Left-click + drag** moves the window.
+8. **Size** ▸ Small / Medium / Large resizes the window **in place** without snapping back to the corner.
+9. **Language** ▸ English / 中文 instantly re-renders every label everywhere (menu, tray tooltip, phase text, notifications, version label) and persists to `settings.json` in the user-data directory.
+10. Starting the timer counts down; on reaching 0 it **auto-advances** to a break and the window **hides**; a desktop notification fires.
+11. After a break it auto-loops back to work and the window **re-shows**.
+12. After 4 work sessions, the break is the 15-minute long break.
 
 ## Tech Stack
 

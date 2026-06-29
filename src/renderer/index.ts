@@ -1,12 +1,13 @@
 import { formatTime } from '../shared/format.js'
-import { PHASE_LABEL, durationFor } from '../shared/config.js'
+import { phaseLabel, durationFor } from '../shared/config.js'
+import { t, DEFAULT_LOCALE, type Locale } from '../shared/i18n.js'
 import type { EngineState, Phase } from '../shared/types.js'
 
 const RADIUS = 40
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS // ≈ 251.327
 
 const countdown = document.getElementById('countdown')!
-const phaseLabel = document.getElementById('phase-label')!
+const phaseLabelEl = document.getElementById('phase-label')!
 const progressMaskCircle = document.getElementById('progress-mask-circle')!
 
 // Initialise the mask ring dasharray so it exactly matches the circumference.
@@ -23,6 +24,8 @@ const PHASE_CLASS: Record<Phase, string> = {
   long: 'phase-long'
 }
 
+let currentLocale: Locale = DEFAULT_LOCALE
+
 function updateProgress(remainingSeconds: number, phase: Phase): void {
   const total = durationFor(phase)
   const progress = remainingSeconds / total
@@ -34,9 +37,10 @@ function updateProgress(remainingSeconds: number, phase: Phase): void {
 
 function render(state: EngineState): void {
   countdown.textContent = formatTime(state.remainingSeconds)
-  phaseLabel.textContent = state.running
-    ? PHASE_LABEL[state.phase]
-    : `Paused — ${PHASE_LABEL[state.phase]}`
+  const label = phaseLabel(state.phase, currentLocale)
+  phaseLabelEl.textContent = state.running
+    ? label
+    : `${t(currentLocale).pausedPrefix} — ${label}`
 
   document.body.classList.remove('phase-work', 'phase-short', 'phase-long')
   document.body.classList.add(PHASE_CLASS[state.phase])
@@ -48,6 +52,12 @@ let currentState: EngineState | null = null
 window.api.onStateChange((state) => {
   currentState = state
   render(state)
+})
+
+window.api.onLocaleChange((locale) => {
+  currentLocale = locale
+  document.documentElement.setAttribute('lang', locale === 'zh' ? 'zh-CN' : 'en')
+  if (currentState) render(currentState)
 })
 
 // Double-click to start / pause the timer.
