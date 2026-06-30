@@ -26,7 +26,7 @@ A minimal desktop pomodoro timer built with **Electron + TypeScript**. A small 1
 ## Screenshots
 
 <!-- Add your own screenshots here -->
-<!-- ![Work Phase](screenshots/work.png) -->
+![工作阶段](images/pomodoro-en.png)
 
 ## Requirements
 

@@ -26,7 +26,7 @@
 ## 截图
 
 <!-- 在此添加你自己的截图 -->
-<!-- ![工作阶段](screenshots/work.png) -->
+![工作阶段](images/pomodoro-cn.png) 
 
 ## 环境要求
 
