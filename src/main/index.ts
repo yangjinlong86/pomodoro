@@ -13,7 +13,7 @@ import type { ControlAction, Phase, WindowSize } from '../shared/types.js'
 import { t, type Locale } from '../shared/i18n.js'
 import { createWorkWindow, getWorkWindow } from './window.js'
 import { createTray, destroyTray, updateTray } from './tray.js'
-import { visibilityForPhase, windowTitleForPhase } from './visibility.js'
+import { windowTitleForPhase } from './visibility.js'
 import { buildWindowContextMenu, menuDispatch } from './menu.js'
 import { loadSettings, saveSettings, settingsFilePath } from './settings.js'
 
@@ -101,12 +101,9 @@ function applyVisibility(phase: Phase): void {
     win = createWorkWindow()
     applyWindowSize(currentSize)
   }
-  if (visibilityForPhase(phase) === 'show') {
-    win.setTitle(windowTitleForPhase(phase, currentLocale))
-    if (!win.isVisible()) win.show()
-  } else {
-    if (win.isVisible()) win.hide()
-  }
+  // Window is visible in every phase — the renderer swaps label + colour.
+  win.setTitle(windowTitleForPhase(phase, currentLocale))
+  if (!win.isVisible()) win.show()
 }
 
 function publish(): void {
@@ -132,9 +129,7 @@ function applyLocale(locale: Locale): void {
   const win = getWorkWindow()
   if (win && !win.isDestroyed()) {
     win.webContents.send(LOCALE_UPDATE, locale)
-    if (visibilityForPhase(engine.getPhase()) === 'show') {
-      win.setTitle(windowTitleForPhase(engine.getPhase(), locale))
-    }
+    win.setTitle(windowTitleForPhase(engine.getPhase(), locale))
   }
   // Force the tray to rebuild its menu/tooltip on the next publish.
   publish()
@@ -153,10 +148,8 @@ if (!gotLock) {
     currentLocale = loadSettings(settingsFile).locale
 
     createTray(engine.getState(), dispatch, () => {
-      // Clicking the tray icon reveals the work window if currently in a work phase.
-      if (engine.getPhase() === 'work') {
-        getWorkWindow()?.show()
-      }
+      // Clicking the tray icon reveals the work window regardless of phase.
+      getWorkWindow()?.show()
     }, true, currentSize, currentLocale)
     createWorkWindow()
     applyWindowSize(currentSize)

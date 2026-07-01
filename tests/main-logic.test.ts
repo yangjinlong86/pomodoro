@@ -34,10 +34,10 @@ describe('work window options', () => {
 })
 
 describe('visibilityForPhase', () => {
-  it('shows the window during work and hides it during breaks', () => {
+  it('shows the window in every phase (work + breaks)', () => {
     expect(visibilityForPhase('work')).toBe('show')
-    expect(visibilityForPhase('short')).toBe('hide')
-    expect(visibilityForPhase('long')).toBe('hide')
+    expect(visibilityForPhase('short')).toBe('show')
+    expect(visibilityForPhase('long')).toBe('show')
   })
 })
 

@@ -20,7 +20,7 @@ A minimal desktop pomodoro timer built with **Electron + TypeScript**. A small 1
 - **Drag to move** — left-click and drag the timer face to reposition the window
 - **Phase-change notifications** — desktop notification when switching between work and break
 - **Help** opens [the project on GitHub](https://github.com/yangjinlong86/pomodoro)
-- **Version label** — current version (e.g. `Pomodoro Timer V0.2.0`) shown at the bottom of the menu
+- **Version label** — current version (e.g. `Pomodoro Timer V0.3.0`) shown at the bottom of the menu
 - **Single instance** — only one copy of the app runs at a time
 
 ## Screenshots
@@ -131,7 +131,7 @@ Expect:
 1. A **100×100 frameless window** appears in the **top-right** corner.
 2. The window is **always on top**.
 3. It shows `25:00` in Orbitron font with a four-colour ring on a black background.
-4. A **tray icon** with a context menu: Pin/Unpin, Start/Pause, Reset, Skip, Size, Language, Help, Quit, and a version label at the bottom (`Pomodoro Timer V0.2.0`).
+4. A **tray icon** with a context menu: Pin/Unpin, Start/Pause, Reset, Skip, Size, Language, Help, Quit, and a version label at the bottom (`Pomodoro Timer V0.3.0`).
 5. **Right-click** the timer face shows the same menu.
 6. **Double-click** the timer face toggles Start / Pause.
 7. **Left-click + drag** moves the window.

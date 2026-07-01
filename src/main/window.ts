@@ -23,7 +23,8 @@ export function createWorkWindow(): BrowserWindow {
   })
 
   workWindow.on('ready-to-show', () => {
-    // Actual show/hide is driven by phase visibility in index.ts; only show if work.
+    // Actual show/hide is driven by phase visibility in index.ts.
+    // The window is currently shown in every phase (work + breaks).
   })
 
   // Load the built renderer.

@@ -2,9 +2,13 @@ import type { EngineState, Phase } from '../shared/types.js'
 import { phaseLabel } from '../shared/config.js'
 import { t, type Locale } from '../shared/i18n.js'
 
-/** PURE: should the work window be visible during this phase? */
-export function visibilityForPhase(phase: Phase): 'show' | 'hide' {
-  return phase === 'work' ? 'show' : 'hide'
+/** PURE: should the work window be visible during this phase?
+ *
+ * The window is always visible — during breaks the renderer shows the break
+ * countdown and switches to the break background/label. `phase` is retained in
+ * the signature for future policies (e.g. an opt-out that hides on break). */
+export function visibilityForPhase(_phase: Phase): 'show' | 'hide' {
+  return 'show'
 }
 
 /** PURE: window title for a phase (not rendered when frameless, kept for a11y/accessibility). */

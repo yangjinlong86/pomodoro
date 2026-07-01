@@ -4,10 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-A minimal desktop pomodoro timer (Electron + TypeScript). During work sessions a
-**300×300 always-on-top** window shows the countdown in the top-right corner and
-hides during breaks. Controls live in the system tray. Full cycle: 25 min work /
-5 min short break / 15 min long break (after every 4 work sessions), auto-looping.
+A minimal desktop pomodoro timer (Electron + TypeScript). An
+**always-on-top** window in the top-right corner shows the countdown in every
+phase — work, short break, and long break — with the label and background
+colour swapping to reflect the current phase. Controls live in the system
+tray. Full cycle: 25 min work / 5 min short break / 15 min long break (after
+every 4 work sessions), auto-looping.
 
 ## Commands
 
@@ -32,7 +34,7 @@ src/
   timer/       PomodoroEngine — PURE state machine, zero Electron/DOM deps, fully unit-tested
   main/        Electron main process
     window-options.ts  PURE BrowserWindow options (300x300, frameless, alwaysOnTop, locked webPreferences)
-    visibility.ts      PURE helpers: visibilityForPhase (show on work / hide on break), trayLabel, windowTitle
+    visibility.ts      PURE helpers: visibilityForPhase (currently always 'show'), trayLabel, windowTitle
     menu.ts            PURE tray-menu template builder + dispatch indirection
     window.ts          createWorkWindow (uses electron + screen for top-right positioning)
     tray.ts            createTray / updateTray (uses electron)
@@ -47,9 +49,10 @@ tests/         vitest — engine, format, main-logic (pure modules), smoke
 - **Drift-free timing**: `PomodoroEngine` stores an absolute `endTime`; remaining
   seconds are derived from `endTime - now()` each read, never by decrementing a
   counter. The clock is injected (`now: () => ms`) so tests are deterministic.
-- **Window visibility**: `visibilityForPhase` returns `show` for `work`, `hide`
-  for breaks. `main/index.ts` applies it only on phase *change* (compares
-  previous phase), not every tick.
+- **Window visibility**: `visibilityForPhase` currently returns `show` for
+  every phase — the renderer swaps the phase label and background colour so
+  the same window presents work and break countdowns. The helper is retained
+  as the single toggle point for a future opt-out that hides during breaks.
 - **Pure / Electron split**: `window-options.ts`, `visibility.ts`, `menu.ts`
   carry only **type** imports from `electron` (stripped at runtime), so the unit
   tests can import them without launching Electron. `window.ts`/`tray.ts`/
